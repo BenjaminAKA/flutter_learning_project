@@ -97,12 +97,122 @@ class _Lesson06HttpRequestState extends State<Lesson06HttpRequest> {
   }
 
   Widget _buildPostRequestExample() {
-    return SizedBox(height: 20);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'POST请求：向服务器发送数据',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _status == 'loading' ? null : _createPost,
+              child: const Text('创建文章（POST）'),
+            ),
+            const SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: _status == 'loading' ? null : _updateUser,
+              child: const Text('更新用户信息（POST）'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildResponseDisplay() {
-    return SizedBox(height: 20);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Text(
+                  '状态: ',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                _buildStatusIndicator(),
+              ],
+            ),
+            const SizedBox(height: 16),
+            if (_status == 'loading')
+              const Center(child: CircularProgressIndicator())
+            else if (_status == 'success')
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12.0),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.green),
+                ),
+                child: SelectableText(
+                  _responseData,
+                  style: const TextStyle(fontSize: 12),
+                ),
+              )
+            else if (_status == 'error')
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12.0),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.red),
+                  ),
+                  child: Text(
+                    _errorMessage,
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                ),
+          ],
+        ),
+      ),
+    );
   }
+
+  /// 状态指示器
+  Widget _buildStatusIndicator() {
+    Color color;
+    String text;
+
+    switch (_status) {
+      case 'loading':
+        color = Colors.blue;
+        text = '加载中...';
+        break;
+      case 'success':
+        color = Colors.green;
+        text = '成功';
+        break;
+      case 'error':
+        color = Colors.red;
+        text = '错误';
+        break;
+      default:
+        color = Colors.grey;
+        text = '空闲';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(color: color, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
 
   /// GET请求：获取用户数据
   ///
@@ -138,5 +248,100 @@ class _Lesson06HttpRequestState extends State<Lesson06HttpRequest> {
   }
 
   /// GET请求：获取文章列表
-  Future<void> _fetchPosts() async {}
+  Future<void> _fetchPosts() async {
+    setState(() {
+      _status = 'loading';
+      _responseData = '';
+      _errorMessage = '';
+    });
+
+    try {
+      final response = await http.get(
+        Uri.parse('https://jsonplaceholder.typicode.com/posts?_limit=5'),
+      );
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        setState(() {
+          _status = 'success';
+          _responseData = const JsonEncoder.withIndent('  ').convert(data);
+        });
+      } else {
+        throw Exception('请求失败：${response.statusCode}');
+      }
+    } catch (e) {
+      setState(() {
+        _status = 'error';
+        _errorMessage = '错误: $e';
+      });
+    }
+  }
+
+  /// POST请求：创建文章
+  Future<void> _createPost() async {
+    setState(() {
+      _status = 'loading';
+      _responseData = '';
+      _errorMessage = '';
+    });
+    try {
+      // 准备要发送的数据
+      final postData = {
+        'title': 'Flutter学习笔记',
+        'body': '这是通过POST请求创建的文章内容',
+        'userId': 1,
+      };
+      final response = await http.post(
+        Uri.parse('https://jsonplaceholder.typicode.com/posts'),
+        headers: {'Content-Type': 'application/json; charset=UTF-8'},
+        body: json.encode(postData),
+      );
+
+      if (response.statusCode == 201) {
+        // 201表示创建成功
+        final data = json.decode(response.body);
+        setState(() {
+          _status = 'success';
+          _responseData = JsonEncoder.withIndent('  ').convert(data);
+        });
+      } else {
+        throw Exception('请求失败：${response.statusCode}');
+      }
+    } catch (e) {
+      setState(() {
+        _status = 'error';
+        _errorMessage = '错误: $e';
+      });
+    }
+  }
+
+  /// POST请求：更新用户信息
+  Future<void> _updateUser() async {
+    setState(() {
+      _status = 'loading';
+      _responseData = '';
+      _errorMessage = '';
+    });
+    try {
+      final updateData = {'name': 'Flutter开发者', 'email': 'flutter@example.com'};
+      final response = await http.post(
+        Uri.parse('https://jsonplaceholder.typicode.com/users/1'),
+        headers: {'Content-Type': 'application/json; charset=UTF-8'},
+        body: json.encode(updateData),
+      );
+      if (response.statusCode == 201) {
+        final data = json.decode(response.body);
+        setState(() {
+          _status = 'success';
+          _responseData = JsonEncoder.withIndent(' ').convert(data);
+        });
+      } else {
+        throw Exception('请求失败：${response.statusCode}');
+      }
+    } catch (e) {
+      setState(() {
+        _status = 'error';
+        _errorMessage = '错误：$e';
+      });
+    }
+  }
 }
